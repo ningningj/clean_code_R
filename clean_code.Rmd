@@ -1,0 +1,327 @@
+---
+title: "Clean code and functions in R"
+output: html_document
+---
+
+Chunking by comments
+
+* in regular R scripts
+    * visually
+    * by named sections
+* in R markdown
+    * naming code chunks
+
+Chunking by function
+
+http://nicercode.github.io/guides/functions/
+
+Why write functions?
+
+* name a chunk of code for easier reading
+* easily reuse a chunk of code
+* leverage the full power of sapply and lapply
+
+What makes a good function?
+
+* It’s short
+* It performs a single operation well
+* It uses intuitive names for the function, arguments, and variables
+* It is flexible where possible
+
+Let's clean up some reasonably dense code.  This chunk of script is perfectly functional, but it's tough to tell what it's doing.  Read through it, see if you can make sense of what's happening.
+```{r dense code example}
+dir_g<-'~/github/clean_code_R'
+dir_d<-file.path(dir_g,'data')
+setwd(dir_g)
+for (f in list.files(file.path(dir_d,'raw'),pattern=glob2rx('*.csv'),full.names=T)) { 
+  # f=list.files(file.path(dir_d,'raw'),pattern=glob2rx('*.csv'),full.names=T)[1]
+  cat(sprintf('\n\n\n====\nfile: %s\n',basename(f)))
+  d<-read.csv(f,check.names=F,strip.white=TRUE,stringsAsFactors=F)
+  units<-c('tonnes','usd')[str_detect(f,c('quant','value'))]
+  suppressWarnings({
+    m<-d %>% rename(country=`Country (Country)`,commodity=`Commodity (Commodity)`,trade=`Trade flow (Trade flow)`) %>%
+      gather(year,value,-country,-commodity,-trade)
+  })
+  m<-m %>% filter(!country %in% c('Totals','Yugoslavia SFR')) %>%
+    mutate(value=str_replace(value, fixed(' F'),''),value=ifelse(value=='...',NA,value), 
+           value=str_replace(value,fixed('0 0'),0.1),value=str_replace(value,fixed('-'),'0'),
+           value=ifelse(value=='',NA,value)) %>%
+    mutate(value=as.numeric(as.character(value)),year=as.integer(as.character(year))) %>%
+    select(-trade) %>% arrange(country,commodity,is.na(value),year)
+  c2p<-read.csv(file.path(dir_g,'R/commodities2products.csv'),na.strings='')
+  m<-m %>% inner_join(c2p,by='commodity')
+  stopifnot(sum(c('Bonaire','Saba','Sint Maarten','Sint Eustatius')%in%m$country)==0)
+  m_ant<-m %>% filter(country=='Netherlands Antilles') %>%
+    mutate(value=value/4,'Bonaire'=value,'Saba'=value,'Sint Maarten'=value,'Sint Eustatius'=value) %>%
+    select(-value,-country) %>% gather(country,value,-commodity,-product,-year) %>%
+    mutate(country=as.character(country))
+  m<-m %>%
+    filter(country!='Netherlands Antilles') %>% bind_rows(m_ant)
+  names(m)[names(m)=='value']<-units  
+  h<-sprintf('%s/%s.csv',dir_d,units)
+  write.csv(m,h,row.names=FALSE,na='')
+}
+```
+
+A little context might help: this is related to the OHI Natural Products goal.  From the FAO FishStatJ site, we downloaded two data sets on marine commodities: harvest in tonnes, and value in US$, across a many years and many countries.  In a loop, the script does this process for each data set:
+* The script reads in the raw data from the .csv file.
+* It reformats the data into 'tidy' format (columns = variables, rows = observations)
+* It replaces some FAO codes with values more useful for OHI
+* It attaches a 'product' field to group related commodities
+* It divides Netherlands Antilles into four separate regions
+* Finally, it then saves the output to a .csv.
+
+We can make it a little more readable by using ideas from Hadley's style guide.  In the following section, I've done a few things:
+* Used spaces and carriage returns and such to give the text a little breathing room.
+* Changed variable names to give a little more context (also spelled out TRUE/FALSE)
+* Added a few comments to help explain what the code is doing and why
+* Shortened each line to do just one thing
+
+``` {r spacing - variable names - comments}
+dir_git  <- '~/github/clean_code_R'
+dir_data <- file.path(dir_git, 'data')
+setwd(dir_git)
+
+for (comm_fn in list.files(file.path(dir_data, 'raw'), pattern = glob2rx('*.csv'), full.names = TRUE)) { 
+    # comm_fn = list.files(file.path(dir_data, 'raw'), pattern = glob2rx('*.csv'), full.names = TRUE)[1]
+  
+  cat(sprintf('\nReading FAO Commodity file: %s\n', basename(comm_fn)))
+  comm_raw <- read.csv(f, check.names = FALSE, strip.white = TRUE, stringsAsFactors = FALSE)
+  
+  ### Determine units based on file name
+  units <- c('tonnes', 'usd')[str_detect(comm_fn, c('quant', 'value'))]
+  
+  ### Rename variables and gather harvest values from all years into one 
+  ### column indexed by year (long format)
+  suppressWarnings({
+    ### Warning message: attributes are not identical across measure variables; they will be dropped 
+    ### NOTE: by adding 'stringsAsFactors = FALSE' in read.csv, no warnings to suppress...
+    comm_data <- comm_raw %>% 
+      rename(country   = `Country (Country)`,
+             commodity = `Commodity (Commodity)`,
+             trade     = `Trade flow (Trade flow)`) %>%
+      gather(year, value, -country, -commodity, -trade)
+  })
+  
+  comm_data <- comm_data %>% 
+    filter(!country %in% c('Totals', 'Yugoslavia SFR'))
+```
+
+The next bit cleans up the FAO codes; let's put it into a function and give it a descriptive name.
+``` {r function-ize the FAO cleanup code}
+
+### Original code, cleaned up a bit:
+#   m <- m %>% 
+#     mutate(value = str_replace(value, fixed(' F'), ''),
+#            value = ifelse(value == '...', NA, value), 
+#            value = str_replace(value, fixed('0 0'), 0.1),
+#            value = str_replace(value, fixed('-'), '0'),
+#            value = ifelse(value == '', NA, value)) %>%
+#     mutate(value = as.numeric(as.character(value)),
+#            year  = as.integer(as.character(year))) %>%
+#     select(-trade) %>% 
+#     arrange(country, commodity, is.na(value), year)
+
+fao_clean_data <- function(fao_data, sub_0_0 = 0.1) {
+### Swaps out FAO-specific codes for OHI-specific interpretations.
+  fao_cleaned <- fao_data %>%
+    mutate(  
+      value = str_replace(value, fixed( ' F'),    ''),
+        ### FAO denotes with F when they have estimated the value using best available data; drop flag
+      value = ifelse(value == '...', NA, value), 
+        ### FAO's code for NA; swap it out for NA
+      value = str_replace(value, fixed('0 0'), sub_0_0),  
+        ### FAO denotes something as '0 0' when it is > 0 but < 1/2 of a unit. 
+        ### Replace with sub_0_0 value.
+      value = str_replace(value, fixed(  '-'),   '0'),  
+        ### FAO's code for true 0; swap it out
+      value = ifelse(value =='', NA, value)) %>%
+    mutate(
+      value = as.numeric(as.character(value)),
+        ### convert value and year strings to numbers
+      year  = as.integer(as.character(year)))       
+        ### search in R_inferno.pdf for "shame on you" - factors!
+  
+  # print(head(fao_cleaned))
+  return(fao_cleaned)
+}
+
+comm_data <- comm_data %>% fao_clean_data()
+```
+
+### Functions:
+
+#### Loading a function definition
+To use a function, you need to load it into your working environment.  Select the whole function definition and run it.
+* If I change anything within the function, I need to reload it.
+* Because of that, I usually wait until I get it working properly on its own, then wrap the whole thing in a function definition.
+
+#### Quick functions: wrap existing code with a function definition to give it a descriptive name
+To define a function, wrap this around your code:
+* `function_name <- function(argument1, argument2, argument3 = default_value)` and then open curly brace `{`
+* at the end, a closed curly brace `}`
+
+#### Function arguments:
+* Use arguments to make the function more flexible and powerful.
+* Provide default values where it makes sense, so users don't have to assign values for every single argument.
+* Arguments are interpreted in order, but you can also explicitly call the argument name (especially if you are skipping an argument that has a default value).
+* Make your first argument your data frame, so can use `%>%` operator `dplyr` style. Yay!
+
+#### Returning values from a function
+Unless otherwise specified, a function will return (invisibly) the last operation as its value up to where the function was called.  In this case, the `return(fao_cleaned)` is unnecessary, but I think it helps to make things obvious to a new set of eyes, and can prevent issues.
+
+* what if I didn't have the `return()` call and added a `print(head(fao_cleaned))` right at the end? 
+* what if I have both the `print()` call and the `return()` call?
+
+What if you want to return multiple values from a function?  see the appendix for some ideas.
+
+#### Robust functions
+Include error checking in your functions to make them more resilient in the face of unexpected data values or classes.  It's also helpful to print messages to the user to indicate what's going on in the code, especially for complex operations.
+
+Here's the messy code, cleaned up a bit.  
+* Wrap it in a function definition
+* try to make it more robust to errors
+* add some comments for your collaborators.
+* add some messages so the user can track the progress
+
+``` {r error checking in functions}
+### original code, cleaned up a bit:
+# stopifnot(sum(c('Bonaire', 'Saba', 'Sint Maarten', 'Sint Eustatius') %in% m$country) == 0)
+# m_ant <- m %>% 
+#   filter(country == 'Netherlands Antilles') %>%
+#   mutate(value            = value / 4,
+#          'Bonaire'        = value,
+#          'Saba'           = value,
+#          'Sint Maarten'   = value,
+#          'Sint Eustatius' = value) %>%
+#   select(-value, -country) %>% 
+#   gather(country, value, -commodity, -product, -year) %>%
+#   mutate(country=as.character(country))
+# m <- m %>%
+#   filter(country != 'Netherlands Antilles') %>% 
+#   bind_rows(m_ant)
+
+```
+
+Here's my version:
+``` {r error checking in functions 2}
+np_fix_antilles <- function(comm_data) {
+  ### FAO reports Netherlands Antilles as a single block, but OHI reports the
+  ### four islands as separate regions.  This function divides the FAO reported
+  ### harvest value across the four separate islands.
+  
+  if(sum(c('Bonaire', 'Saba', 'Sint Maarten', 'Sint Eustatius') %in% comm_data$country) == 0) {
+    cat('Netherlands Antilles regions already defined! Value not divided.\n')
+  } else {
+    cat('Dividing Neth Antilles value across subregions\n')
+    ### divide Neth Antilles values across four subregions
+    ant_data <- comm_data %>% 
+      filter(country == 'Netherlands Antilles') %>%
+      mutate(value            = value / 4,
+             'Bonaire'        = value,
+             'Saba'           = value,
+             'Sint Maarten'   = value,
+             'Sint Eustatius' = value) %>%
+      select(-value, -country) %>% 
+      gather(country, value, -commodity, -product, -year) %>%
+      mutate(country = as.character(country))
+    ### Remove Neth Antilles from list, and bind the subregions instead
+    comm_data <- comm_data %>%
+      filter(country != 'Netherlands Antilles') %>% 
+      bind_rows(ant_data)
+  }
+  return(comm_data)
+}
+
+comm_data <- comm_data %>% np_fix_antilles()
+```
+
+since OHI actually uses multiple FAO data sets, this code can be reused in multiple places.  Why reinvent the wheel each time?  Also - if the codes change next year, we only have to adjust the code in one place.
+
+
+
+### Appendix
+#### Environments and functions
+In R (like most languages), when you call a function, the function runs in its own little world, separate from the world of the main script.
+
+The main script, and anything you run manually, is typically running in the Global environment.  The Environment pane in RStudio shows you the current data, values, and functions loaded into the Global environment.
+
+When you call a function, a new local environment opens up, with its own set of names and values.  It is like Las Vegas: what happens in the local environment stays in the local environment.
+* This is great, because once you know a function is working properly, it can create all kinds of new objects and do all kinds of calculations, and you never have to see them - they don't clutter up your global environment pane.
+
+There are a couple of exceptions:
+* if you create global variables, you can change these from within the local environment and they stay changed when you get back to the global environment.  This is generally frowned upon because it can create unintended consequences.
+* when the function finishes, by default it returns the value from the last operation up to the parent environment.  It does this invisibly, meaning it won't echo the value to the console, but it will assign the value to an object if you tell it to.
+* if you explicitly call `return(value)` within the function, it will immediately exit the function and the local environment, and pass the value back to the parent environment.
+    * you can call `return(invisible(value))` if you like...
+
+``` {r arguments, echo = FALSE}
+### Use arguments to make your function more flexible for input values.
+is_pos <- function(arg1) {
+  x <- (arg1 > 0)
+  if(x) cat(sprintf('%s is positive!\n', arg1))
+  return(x)
+}
+is_pos(-5)
+
+x <- 11
+is_pos(x)
+
+x
+### Within the global environment, we gave 'x' a number value, and then passed
+### to the function.  Within the function, we gave 'x' a value of TRUE or FALSE
+### When we get back to the global environment, the local 'x' just disappears.
+
+x <- c(-2, 0, 5)
+is_pos(x)
+### a function that can deal with unexpected values and object classes will 
+### be more robust and make you look cooler.
+
+### If you assign default values to arguments, you don't even have to pass 
+### that argument in the function call - unless you don't like the default,
+### in which case you can override it easily.
+is_big <- function(arg1, big_thresh = 10) {
+  x <- (arg1 >= big_thresh)
+  if(x) cat(sprintf('%s is bigger than %s!\n', arg1, big_thresh))
+  else(cat(sprintf('%s is not bigger than %s\n', arg1, big_thresh)))
+  return(x)
+}
+x <- 15
+is_big(x)
+is_big(x, big_thresh = 20)
+
+```
+
+Note that functions can be called from other functions, so you can get multiple levels of local functions within each other.  Func-ception!
+
+One aspect of R that might cause confusion... a local environment, nested in a parent environment (such as the global environment), can see values of objects in those higher environments and use them.  Even if you didn't explicitly pass that object into your function.  
+
+``` {r func-ception}
+make_small <- function(arg1) {
+  if(is_big(arg1)) {
+    x <- arg1/2
+  } else {
+    cat(sprintf('%s is already small.\n', arg1))
+    x <- arg1
+  }
+  return(x)
+}
+
+make_bigger <- function() {
+  if(is_big(val_from_parent)) {
+    x <- val_from_parent^2
+  } else {
+    x <- val_from_parent - 1
+  }
+  val_from_parent <- -999
+  return(x)
+}
+val_from_parent <- 8
+
+make_bigger()
+
+val_from_parent
+### Note that make_bigger() can access val_from_parent, but cannot change it -
+### it makes a local copy and only can change that.
+```
+
