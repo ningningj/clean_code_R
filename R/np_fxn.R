@@ -44,27 +44,32 @@ np_commodity_lookup <- function(data, com2prod) {
 
 
 
-np_split_antilles <- function(m) {
-### Deal with special cases of countries, specific to NP.  
-### - FAO reports 'Antilles' as one region, but OHI considers as four 
-###   reported regions; break up and distribute values 
-
-  stopifnot( sum(c('Bonaire','Saba','Sint Maarten','Sint Eustatius') %in% m$country) == 0 )
-  m_ant <- m %>%
-    filter(country == 'Netherlands Antilles') %>%
-    mutate(
-      value            = value/4,
-      'Bonaire'        = value,
-      'Saba'           = value,
-      'Sint Maarten'   = value,
-      'Sint Eustatius' = value) %>%
-    select(-value, -country) %>%
-    gather(country, value, -commodity, -product, -year) %>%
-    mutate(country = as.character(country))  # otherwise, m_ant$country is factor; avoids warning in bind_rows bel
-  m1 <- m %>%
-    filter(country != 'Netherlands Antilles') %>%
-    bind_rows(m_ant)
-  return(m1)
+np_fix_antilles <- function(harvest_data) {
+  ### FAO reports Netherlands Antilles as a single block, but OHI reports the
+  ### four islands as separate regions.  This function divides the FAO reported
+  ### harvest value across the four separate islands.
+  
+  if(sum(c('Bonaire', 'Saba', 'Sint Maarten', 'Sint Eustatius') %in% harvest_data$country) != 0) {
+    cat('Netherlands Antilles regions already defined! Value not divided.\n')
+  } else {
+    cat('Dividing Netherlands Antilles value across subregions...\n')
+    ### divide Neth Antilles values across four subregions
+    ant_data <- harvest_data %>% 
+      filter(country == 'Netherlands Antilles') %>%
+      mutate(value            = value / 4,
+             'Bonaire'        = value,
+             'Saba'           = value,
+             'Sint Maarten'   = value,
+             'Sint Eustatius' = value) %>%
+      select(-value, -country) %>% 
+      gather(country, value, -commodity, -product, -year) %>%
+      mutate(country = as.character(country))
+    ### Remove Neth Antilles from list, and bind the subregions instead
+    harvest_data <- harvest_data %>%
+      filter(country != 'Netherlands Antilles') %>% 
+      bind_rows(ant_data)
+  }
+  return(harvest_data)
 }
 
 
