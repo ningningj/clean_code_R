@@ -415,6 +415,29 @@ for (harvest_filename in list.files(file.path(dir_data, 'raw'), pattern = glob2r
 print(head(harvest_data)) ### note only prints data frame from second harvest file
 ```
 
+#### Other tips for functions
+**Comment it**
+Provide comments at the start to help the new user understand exactly what the function is supposed to do.  If you can describe the inputs and outputs, excellent.  If there are any odd pitfalls or special cases, let us know.
+
+**Clean up after yourself**
+Temporary variables created within a function usually disappear when you're done with the function - see *environments* in the appendix.  But if you are manipulating a data frame, and create a bunch of temporary columns in the mean time, ditch them before passing the data frame back to the main script through a `return()` call.
+
+**Keep it flexible, but not too flexible**
+Additional arguments provide flexibility, and that's great - especially if you pre-define the most common default values when you define the function.  That way the user doesn't have to worry about those most of the time.
+
+**Don't try to do too much all at once**
+Think `name_to_rgn()` in ohicore.  It does a ton of useful stuff all in one fell swoop.  It is beautifully coded, and all the arguments have defaults that make it easier for the familiar user.  But unless you've spent a lot of time with it, there are many things going on under the hood that could be confusing and result in unintended consequences.  It actually does far more than just relating country names to country id numbers...
+```
+ohicore::name_to_rgn(d, fld_name = "country", flds_unique = fld_name,
+  fld_value = "value", collapse_fxn = c("sum_na", "mean",
+  "weighted.mean")[1], collapse_csv = NULL, collapse_flds_join = NULL,
+  dir_lookup = "../ohiprep/src/LookupTables",
+  rgn_master.csv = file.path(dir_lookup, "eez_rgn_2013master.csv"),
+  rgn_synonyms.csv = file.path(dir_lookup, "rgn_eez_v2013a_synonyms.csv"),
+  add_rgn_name = F, add_rgn_type = F)
+```
+
+
 ### Functions and source()
 
 Since OHI actually uses multiple FAO data sets in several places, the FAO cleanup function above (`fao_clean_data()`) can be reused for multiple OHI goals.
@@ -548,4 +571,39 @@ val_from_parent
 
 ### Functions and sapply() and lapply()
 
-tbd...
+tbd...  for now: http://www.ats.ucla.edu/stat/r/library/advanced_function_r.htm#lapply
+
+### Returning multiple objects from a function
+
+Sometimes a function is just too awesome and needs to return more awesomeness than can be contained in a single R object.  In this case, you have a couple of options:
+
+* simplify the function so it just does one thing... this is probably the best bet!  Most of the time, you should aim for small, simple functions that do one thing really well.
+* use global variables... this is a terrible idea.  Don't do it.
+* combine multiple objects into a list, and return the list.
+    * if you return a named list, you are a hero!
+    * each list item can be a completely different type of object
+    
+``` {r return a list, echo = TRUE, eval = TRUE}
+blargle <- function(x, y, abc) {
+### This function does a number of stupid things:
+### * converts character string 'abc' into all caps
+### * it creates a vector of same length as 'abc' and fills it with
+###   random norm-distributed values, mean x, sd y.
+### * returns both results at once!
+
+z <- rnorm(nchar(abc), mean = x, sd = y)
+
+def <- toupper(abc)
+
+rtn_list <- list('z' = z, 'abc' = def)
+
+return(rtn_list)
+}
+
+thing <- blargle(10, 7, 'cattywampus')
+thing     ### shows the list of both variables
+thing$z   ### same result as thing[[1]]
+thing$abc ### same result as thing[[2]]
+
+### NOTE: do not use 'blargle' or 'thing' to name your functions or variables.
+```
