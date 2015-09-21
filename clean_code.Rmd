@@ -116,7 +116,7 @@ In R Markdown, you can also create code chunks; as in regular Markdown, a code c
 ![named code chunk](img/named_code_chunk.png)
 
 
-### Chunking by function
+### Chunking by functions
 
 http://nicercode.github.io/guides/functions/
 
