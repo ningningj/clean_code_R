@@ -647,35 +647,35 @@ make_bigger()</code></pre>
 </ul></li>
 </ul>
 <pre class="r"><code>blargle &lt;- function(x, y, abc) {
-### This function does a number of stupid things:
-### * converts character string 'abc' into all caps
-### * it creates a vector of same length as 'abc' and fills it with
-###   random norm-distributed values, mean x, sd y.
-### * returns both results at once!
-
-z &lt;- rnorm(nchar(abc), mean = x, sd = y)
-
-abc &lt;- toupper(abc)
-
-rtn_list &lt;- list('z' = z, 'abc' = abc)
-
-return(rtn_list)
+  ### This function does a couple of useless things:
+  ### * converts character string 'abc' into all caps
+  ### * it creates a vector of same length as 'abc' and fills it with
+  ###   random norm-distributed values, mean x, sd y.
+  ### * returns both results at once!
+  
+  z &lt;- rnorm(nchar(abc), mean = x, sd = y)
+  
+  def &lt;- toupper(abc)
+  
+  rtn_list &lt;- list('z' = z, 'abc' = def)
+  
+  return(rtn_list)
 }
 
 thing &lt;- blargle(10, 7, 'cattywampus')
 thing     ### shows the list of both variables</code></pre>
 <pre><code>## $z
-##  [1] 15.058081 17.376590 17.174425 10.927394 22.779623 -2.347743 11.322980
-##  [8] 11.303691  4.091413 21.695039  3.345660
+##  [1]  0.8064651  7.1216237 13.1116602  2.4836344 -2.3719178  0.9351887
+##  [7] 15.3854745  8.5994054 11.9083720 16.0071933 -5.8102364
 ## 
 ## $abc
 ## [1] &quot;CATTYWAMPUS&quot;</code></pre>
 <pre class="r"><code>thing$z   ### same result as thing[[1]]</code></pre>
-<pre><code>##  [1] 15.058081 17.376590 17.174425 10.927394 22.779623 -2.347743 11.322980
-##  [8] 11.303691  4.091413 21.695039  3.345660</code></pre>
+<pre><code>##  [1]  0.8064651  7.1216237 13.1116602  2.4836344 -2.3719178  0.9351887
+##  [7] 15.3854745  8.5994054 11.9083720 16.0071933 -5.8102364</code></pre>
 <pre class="r"><code>thing$abc ### same result as thing[[2]]</code></pre>
 <pre><code>## [1] &quot;CATTYWAMPUS&quot;</code></pre>
-<pre class="r"><code>### NOTE: do not use 'blargle' or 'thing' to name your functions or variables.</code></pre>
+<pre class="r"><code>### NOTE: please do not use 'blargle' or 'thing' to name your functions or variables.</code></pre>
 </div>
 
 

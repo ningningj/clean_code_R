@@ -585,19 +585,19 @@ Sometimes a function is just too awesome and needs to return more awesomeness th
     
 ``` {r return a list, echo = TRUE, eval = TRUE}
 blargle <- function(x, y, abc) {
-### This function does a number of stupid things:
-### * converts character string 'abc' into all caps
-### * it creates a vector of same length as 'abc' and fills it with
-###   random norm-distributed values, mean x, sd y.
-### * returns both results at once!
-
-z <- rnorm(nchar(abc), mean = x, sd = y)
-
-def <- toupper(abc)
-
-rtn_list <- list('z' = z, 'abc' = def)
-
-return(rtn_list)
+  ### This function does a couple of useless things:
+  ### * converts character string 'abc' into all caps
+  ### * it creates a vector of same length as 'abc' and fills it with
+  ###   random norm-distributed values, mean x, sd y.
+  ### * returns both results at once!
+  
+  z <- rnorm(nchar(abc), mean = x, sd = y)
+  
+  def <- toupper(abc)
+  
+  rtn_list <- list('z' = z, 'abc' = def)
+  
+  return(rtn_list)
 }
 
 thing <- blargle(10, 7, 'cattywampus')
@@ -605,5 +605,5 @@ thing     ### shows the list of both variables
 thing$z   ### same result as thing[[1]]
 thing$abc ### same result as thing[[2]]
 
-### NOTE: do not use 'blargle' or 'thing' to name your functions or variables.
+### NOTE: please do not use 'blargle' or 'thing' to name your functions or variables.
 ```
