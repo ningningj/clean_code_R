@@ -227,6 +227,7 @@ The next bit cleans up the FAO codes; let's put it into a function and give it a
 To define a function, wrap this around your code:
 
 * `function_name <- function(argument1, argument2, argument3 = default_value)` and then open curly brace `{`
+* optional but recommended, if your function returns a value, add a `return(<variable name>)` as the last line
 * at the end, a closed curly brace `}`
 
 ``` {r function-ize the FAO cleanup code, echo = TRUE, eval = FALSE}

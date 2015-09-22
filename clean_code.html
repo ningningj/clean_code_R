@@ -228,13 +228,14 @@ for (f in list.files(file.path(dir_d,'raw'),pattern=glob2rx('*.csv'),full.names=
 <pre class="r"><code>print(head(m))</code></pre>
 <pre><code>## Source: local data frame [6 x 5]
 ## 
-##   country          commodity year usd product
-## 1 Albania Coral and the like 1996 391  corals
-## 2 Albania Coral and the like 1997 137  corals
-## 3 Albania Coral and the like 1998 156  corals
-## 4 Albania Coral and the like 1999 316  corals
-## 5 Albania Coral and the like 2000  57  corals
-## 6 Albania Coral and the like 2001  21  corals</code></pre>
+##   country          commodity  year   usd product
+##     (chr)              (chr) (int) (dbl)  (fctr)
+## 1 Albania Coral and the like  1996   391  corals
+## 2 Albania Coral and the like  1997   137  corals
+## 3 Albania Coral and the like  1998   156  corals
+## 4 Albania Coral and the like  1999   316  corals
+## 5 Albania Coral and the like  2000    57  corals
+## 6 Albania Coral and the like  2001    21  corals</code></pre>
 <p>A little context might help: this is related to the OHI Natural Products goal. From the FAO FishStatJ site, we downloaded two data sets on marine commodities: harvest in tonnes, and value in US$, across a many years and many countries. In a loop, the script does this process for each data set:</p>
 <ul>
 <li>The script reads in the raw data from the .csv file.</li>
@@ -291,6 +292,7 @@ for (harvest_filename in list.files(file.path(dir_data, 'raw'), pattern = glob2r
 <p>To define a function, wrap this around your code:</p>
 <ul>
 <li><code>function_name &lt;- function(argument1, argument2, argument3 = default_value)</code> and then open curly brace <code>{</code></li>
+<li>optional but recommended, if your function returns a value, add a <code>return(&lt;variable name&gt;)</code> as the last line</li>
 <li>at the end, a closed curly brace <code>}</code></li>
 </ul>
 <pre class="r"><code>### Original code, cleaned up a bit:
@@ -472,13 +474,14 @@ for (harvest_filename in list.files(file.path(dir_data, 'raw'), pattern = glob2r
 <pre class="r"><code>print(head(harvest_data)) ### note only prints data frame from second harvest file</code></pre>
 <pre><code>## Source: local data frame [6 x 5]
 ## 
-##   country          commodity year usd product
-## 1 Albania Coral and the like 1996 391  corals
-## 2 Albania Coral and the like 1997 137  corals
-## 3 Albania Coral and the like 1998 156  corals
-## 4 Albania Coral and the like 1999 316  corals
-## 5 Albania Coral and the like 2000  57  corals
-## 6 Albania Coral and the like 2001  21  corals</code></pre>
+##   country          commodity  year   usd product
+##     (chr)              (chr) (int) (dbl)  (fctr)
+## 1 Albania Coral and the like  1996   391  corals
+## 2 Albania Coral and the like  1997   137  corals
+## 3 Albania Coral and the like  1998   156  corals
+## 4 Albania Coral and the like  1999   316  corals
+## 5 Albania Coral and the like  2000    57  corals
+## 6 Albania Coral and the like  2001    21  corals</code></pre>
 </div>
 <div id="other-tips-for-functions" class="section level4">
 <h4>Other tips for functions</h4>
@@ -665,14 +668,14 @@ make_bigger()</code></pre>
 thing &lt;- blargle(10, 7, 'cattywampus')
 thing     ### shows the list of both variables</code></pre>
 <pre><code>## $z
-##  [1]  0.8064651  7.1216237 13.1116602  2.4836344 -2.3719178  0.9351887
-##  [7] 15.3854745  8.5994054 11.9083720 16.0071933 -5.8102364
+##  [1] 10.0987879  7.1575905  3.9213215 12.1466059 12.2347756  1.1802936
+##  [7]  0.7641718 11.1786114 18.6851364 19.3120154 12.2444605
 ## 
 ## $abc
 ## [1] &quot;CATTYWAMPUS&quot;</code></pre>
 <pre class="r"><code>thing$z   ### same result as thing[[1]]</code></pre>
-<pre><code>##  [1]  0.8064651  7.1216237 13.1116602  2.4836344 -2.3719178  0.9351887
-##  [7] 15.3854745  8.5994054 11.9083720 16.0071933 -5.8102364</code></pre>
+<pre><code>##  [1] 10.0987879  7.1575905  3.9213215 12.1466059 12.2347756  1.1802936
+##  [7]  0.7641718 11.1786114 18.6851364 19.3120154 12.2444605</code></pre>
 <pre class="r"><code>thing$abc ### same result as thing[[2]]</code></pre>
 <pre><code>## [1] &quot;CATTYWAMPUS&quot;</code></pre>
 <pre class="r"><code>### NOTE: please do not use 'blargle' or 'thing' to name your functions or variables.</code></pre>
